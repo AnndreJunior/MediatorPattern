@@ -35,24 +35,13 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
-app.MapGet("/weatherforecast", async (IMediator mediator) =>
+app.MapPost("/create-user", async (CreateUserCommand command,IMediator mediator) =>
     {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        var user = await mediator.Send(new CreateUserCommand()
-        {
-            Email = "test@example.com",
-            Name = "amr elshaer"
-        });
-        return forecast;
+        
+        var result = await mediator.Send(command);
+        return result;
     })
-    .WithName("GetWeatherForecast")
+    .WithName("Create user")
     .WithOpenApi();
 
 app.Run();

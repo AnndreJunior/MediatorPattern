@@ -15,30 +15,12 @@ public class Mediator : IMediator
     public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
     {
         var requestType = request.GetType();
-        var handlerType = typeof(IRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
-        
-        var handler = _serviceProvider.GetService(handlerType);
-        if (handler == null)
-            throw new InvalidOperationException($"No handler registered for {requestType.Name}");
+        var executorType = typeof(IRequestExecutor<,>).MakeGenericType(requestType, typeof(TResponse));
+        var executor = _serviceProvider.GetRequiredService(executorType);
 
-        // Get pipeline behaviors
-        var behaviors = _serviceProvider.GetServices<IPipelineBehavior<IRequest<TResponse>, TResponse>>();
-        
-        // Create the request pipeline
-        RequestHandlerDelegate<TResponse> pipeline = () =>
-        {
-            var method = handlerType.GetMethod("Handle");
-            return (Task<TResponse>)method.Invoke(handler, new object[] { request, cancellationToken });
-        };
-
-        // Apply behaviors in reverse order (so first registered runs first)
-        foreach (var behavior in behaviors.Reverse())
-        {
-            var currentPipeline = pipeline;
-            pipeline = () => behavior.Handle(request, currentPipeline, cancellationToken);
-        }
-
-        return await pipeline();
+        var method = executorType.GetMethod("Execute");
+        var task = (Task<TResponse>)method?.Invoke(executor, [request, cancellationToken])!;
+        return await task;
     }
 
     // Publish - For notification operations
